@@ -46,7 +46,7 @@ The system captures real-time video feed from the webcam, detects faces using Ha
 
 - `app.py`: Main Flask application file.
 - `templates/`: HTML templates for the web interface.
-- `static/`: Static files including CSS, JavaScript, and user images.
+- `static/`: Static files including user images and Trained Model.
 - `haarcascade_frontalface_default.xml`: Pre-trained Haar cascade classifier for face detection.
 
 ## Contributing
