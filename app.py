@@ -1,24 +1,20 @@
 import cv2
 import os
 from flask import Flask, request, render_template
-from datetime import date
-from datetime import datetime
+from datetime import date, datetime
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
-import pandas as pd
+import sqlite3
 import joblib
 
 app = Flask(__name__)
 
 nimgs = 10
 
-
 datetoday = date.today().strftime("%m_%d_%y")
 datetoday2 = date.today().strftime("%d-%B-%Y")
 
-
 face_detector = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
-
 
 if not os.path.isdir("Attendance"):
     os.makedirs("Attendance")
@@ -26,9 +22,26 @@ if not os.path.isdir("static"):
     os.makedirs("static")
 if not os.path.isdir("static/faces"):
     os.makedirs("static/faces")
-if f"Attendance-{datetoday}.csv" not in os.listdir("Attendance"):
-    with open(f"Attendance/Attendance-{datetoday}.csv", "w") as f:
-        f.write("Prènom,ID,Temps")
+
+# Initialize SQLite database for the current date
+db_path = f"Attendance/attendance_{datetoday}.db"
+conn = sqlite3.connect(db_path, check_same_thread=False)
+c = conn.cursor()
+
+# Create attendance table if it doesn't exist
+c.execute(
+    """
+    CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        prenom TEXT NOT NULL,
+        emp_id INTEGER NOT NULL,
+        arrivee TEXT,
+        depart TEXT,
+        date TEXT NOT NULL
+    )
+"""
+)
+conn.commit()
 
 
 def totalreg():
@@ -66,25 +79,44 @@ def train_model():
 
 
 def extract_attendance():
-    df = pd.read_csv(f"Attendance/Attendance-{datetoday}.csv")
-    names = df["Prènom"]
-    rolls = df["ID"]
-    times = df["Temps"]
-    l = len(df)
+    c.execute(
+        "SELECT prenom, emp_id, arrivee, depart FROM attendance WHERE date=?",
+        (datetoday,),
+    )
+    rows = c.fetchall()
+    names = [row[0] for row in rows]
+    rolls = [row[1] for row in rows]
+    arrivees = [row[2] for row in rows]
+    departs = [row[3] for row in rows]
+    l = len(rows)
     print(f"Loaded {l} attendance records.")
-    return names, rolls, times, l
+    return names, rolls, arrivees, departs, l
 
 
 def add_attendance(name):
     username = name.split("_")[0]
     userid = name.split("_")[1]
     current_time = datetime.now().strftime("%H:%M:%S")
-    print(f"Added attendance for {username} with id {userid} at {current_time}.")
+    print(f"Recording attendance for {username} with id {userid} at {current_time}.")
 
-    df = pd.read_csv(f"Attendance/Attendance-{datetoday}.csv")
-    if int(userid) not in list(df["Roll"]):
-        with open(f"Attendance/Attendance-{datetoday}.csv", "a") as f:
-            f.write(f"\n{username},{userid},{current_time}")
+    c.execute(
+        "SELECT arrivee, depart FROM attendance WHERE date=? AND emp_id=?",
+        (datetoday, userid),
+    )
+    row = c.fetchone()
+    if row is None:
+        # Record arrival time
+        c.execute(
+            "INSERT INTO attendance (prenom, emp_id, arrivee, date) VALUES (?, ?, ?, ?)",
+            (username, userid, current_time, datetoday),
+        )
+    else:
+        # Record departure time
+        c.execute(
+            "UPDATE attendance SET depart=? WHERE date=? AND emp_id=?",
+            (current_time, datetoday, userid),
+        )
+    conn.commit()
 
 
 def getallusers():
@@ -103,12 +135,13 @@ def getallusers():
 
 @app.route("/")
 def home():
-    names, rolls, times, l = extract_attendance()
+    names, rolls, arrivees, departs, l = extract_attendance()
     return render_template(
         "home.html",
         names=names,
         rolls=rolls,
-        times=times,
+        arrivees=arrivees,
+        departs=departs,
         l=l,
         totalreg=totalreg(),
         datetoday2=datetoday2,
@@ -117,14 +150,15 @@ def home():
 
 @app.route("/start", methods=["GET"])
 def start():
-    names, rolls, times, l = extract_attendance()
+    names, rolls, arrivees, departs, l = extract_attendance()
 
     if "face_recognition_model.pkl" not in os.listdir("static"):
         return render_template(
             "home.html",
             names=names,
             rolls=rolls,
-            times=times,
+            arrivees=arrivees,
+            departs=departs,
             l=l,
             totalreg=totalreg(),
             datetoday2=datetoday2,
@@ -160,12 +194,13 @@ def start():
             break
     cap.release()
     cv2.destroyAllWindows()
-    names, rolls, times, l = extract_attendance()
+    names, rolls, arrivees, departs, l = extract_attendance()
     return render_template(
         "home.html",
         names=names,
         rolls=rolls,
-        times=times,
+        arrivees=arrivees,
+        departs=departs,
         l=l,
         totalreg=totalreg(),
         datetoday2=datetoday2,
@@ -210,12 +245,13 @@ def add():
     cv2.destroyAllWindows()
     print("Training Model")
     train_model()
-    names, rolls, times, l = extract_attendance()
+    names, rolls, arrivees, departs, l = extract_attendance()
     return render_template(
         "home.html",
         names=names,
         rolls=rolls,
-        times=times,
+        arrivees=arrivees,
+        departs=departs,
         l=l,
         totalreg=totalreg(),
         datetoday2=datetoday2,
@@ -223,4 +259,4 @@ def add():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False, host="0.0.0.0")

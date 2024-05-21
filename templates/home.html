@@ -1,3 +1,6 @@
+Here's your HTML template with the addition of "Temps d'arrivée" and "Temps de Départ":
+
+```html
 <!doctype html>
 <html lang="fr">
 
@@ -78,10 +81,11 @@
             </a>
             <table style="background-color: white;">
                 <tr>
-                    <td><b>N° Emp</b></td>
-                    <td><b>Prènom</b></td>
                     <td><b>ID</b></td>
-                    <td><b>Temps</b></td>
+                    <td><b>Prènom</b></td>
+                    <td><b>N° Emp</b></td>
+                    <td><b>Temps d'arrivée</b></td>
+                    <td><b>Temps de Départ</b></td>
                 </tr>
                 {% if l %}
 
@@ -90,7 +94,8 @@
                     <td>{{ i+1 }}</td>
                     <td>{{ names[i] }}</td>
                     <td>{{ rolls[i] }}</td>
-                    <td>{{ times[i] }}</td>
+                    <td>{{ arrivees[i] }}</td>
+                    <td>{{ departs[i] }}</td>
                 </tr>
                 {% endfor %}
                 {% endif %}
@@ -110,7 +115,7 @@
                     style="font-size: 20px; margin-top:10px; margin-bottom:10px; border-radius: 10px; width: 300px; height: 50px;"
                     required>
                 <br>
-                <label style="font-size: 20px; color: white"><b>Entrez l'ID du Nouvel Utilisateur*</b></label>
+                <label style="font-size: 20px; color: white"><b>Entrez le N° Emp du Nouvel Utilisateur*</b></label>
                 <br>
                 <input type="number" id="newusereid" name='newuserid'
                     style="font-size: 20px; margin-top:10px; margin-bottom:10px; border-radius: 10px; width: 300px; height: 50px;"
@@ -123,11 +128,3 @@
                 <br>
                 <h5 style="padding: 25px; color: white;"><i>Utilisateurs Totals dans la Base de Données:
                         {{totalreg}}</i></h5>
-            </form>
-        </div>
-
-    </div>
-
-</body>
-
-</html>
