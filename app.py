@@ -190,7 +190,7 @@ def start():
             )
             cv2.rectangle(frame, (x, y), (x + w, y + h), (50, 50, 255), 1)
         cv2.imshow("Attendance", frame)
-        if cv2.waitKey(1) == ord("o"):
+        if cv2.waitKey(1) in [ord("q"), 27]:
             break
     cap.release()
     cv2.destroyAllWindows()
@@ -239,7 +239,7 @@ def add():
         if j == nimgs * 5:
             break
         cv2.imshow("Adding new User", frame)
-        if cv2.waitKey(1) == 27:
+        if cv2.waitKey(1) in [ord("q"), 27]:
             break
     cap.release()
     cv2.destroyAllWindows()
