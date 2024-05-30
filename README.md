@@ -4,7 +4,7 @@ This is a simple web-based face recognition attendance system implemented using 
 
 ## Overview
 
-The system captures real-time video feed from the webcam, detects faces using Haar cascade classifier, and recognizes them based on a pre-trained KNN classifier. Users can add new faces to the system, and the attendance of recognized individuals is logged in a CSV file.
+The system captures real-time video feed from the webcam, detects faces using Haar cascade classifier, and recognizes them based on a pre-trained KNN classifier. Users can add new faces to the system, and the attendance of recognized individuals is logged in a SQL Database.
 
 ## Prerequisites
 

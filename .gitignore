@@ -1,6 +1,2 @@
 /app.log
-static/faces
 .gitignore
-Attendance/*.db
-*.txt
-Details.md
