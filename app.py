@@ -23,12 +23,10 @@ if not os.path.isdir("static"):
 if not os.path.isdir("static/faces"):
     os.makedirs("static/faces")
 
-# Initialize SQLite database for the current date
 db_path = f"Attendance/attendance_{datetoday}.db"
 conn = sqlite3.connect(db_path, check_same_thread=False)
 c = conn.cursor()
 
-# Create attendance table if it doesn't exist
 c.execute(
     """
     CREATE TABLE IF NOT EXISTS attendance (
@@ -105,13 +103,11 @@ def add_attendance(name):
     )
     row = c.fetchone()
     if row is None:
-        # Record arrival time
         c.execute(
             "INSERT INTO attendance (prenom, emp_id, arrivee, date) VALUES (?, ?, ?, ?)",
             (username, userid, current_time, datetoday),
         )
     else:
-        # Record departure time
         c.execute(
             "UPDATE attendance SET depart=? WHERE date=? AND emp_id=?",
             (current_time, datetoday, userid),
