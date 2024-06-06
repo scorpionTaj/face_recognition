@@ -1,11 +1,14 @@
 import cv2
 import os
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, Response
 from datetime import date, datetime
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 import sqlite3
 import joblib
+from io import StringIO
+import csv
+
 
 app = Flask(__name__)
 
@@ -87,15 +90,33 @@ def extract_attendance():
     arrivees = [row[2] for row in rows]
     departs = [row[3] for row in rows]
     l = len(rows)
-    print(f"Loaded {l} attendance records.")
+    # print(f"Loaded {l} attendance records.")
     return names, rolls, arrivees, departs, l
+
+
+def export_to_csv():
+    names, rolls, arrivees, departs, _ = extract_attendance()
+
+    csv_output = StringIO()
+    csv_writer = csv.writer(csv_output)
+    csv_writer.writerow(["Prènom", "N° Emp", "Temps d'arrivée", "Temps de Départ"])
+    for name, roll, arrive, depart in zip(names, rolls, arrivees, departs):
+        csv_writer.writerow([name, roll, arrive, depart])
+
+    return Response(
+        csv_output.getvalue(),
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": f"attachment;filename=attendance_{datetoday}.csv"
+        },
+    )
 
 
 def add_attendance(name):
     username = name.split("_")[0]
     userid = name.split("_")[1]
     current_time = datetime.now().strftime("%H:%M:%S")
-    print(f"Recording attendance for {username} with id {userid} at {current_time}.")
+    # print(f"Recording attendance for {username} with id {userid} at {current_time}.")
 
     c.execute(
         "SELECT arrivee, depart FROM attendance WHERE date=? AND emp_id=?",
@@ -239,7 +260,7 @@ def add():
             break
     cap.release()
     cv2.destroyAllWindows()
-    print("Training Model")
+    # print("Training Model")
     train_model()
     names, rolls, arrivees, departs, l = extract_attendance()
     return render_template(
@@ -252,6 +273,11 @@ def add():
         totalreg=totalreg(),
         datetoday2=datetoday2,
     )
+
+
+@app.route("/export/csv")
+def export_csv():
+    return export_to_csv()
 
 
 if __name__ == "__main__":
