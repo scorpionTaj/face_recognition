@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 nimgs = 10
 
-datetoday = date.today().strftime("%m_%d_%y")
+datetoday = date.today().strftime("%d_%m_%y")
 datetoday2 = date.today().strftime("%d-%B-%Y")
 
 face_detector = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
