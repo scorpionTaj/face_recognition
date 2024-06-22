@@ -7,8 +7,23 @@ from sklearn.neighbors import KNeighborsClassifier
 import sqlite3
 import joblib
 from io import StringIO
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    matthews_corrcoef,
+)
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 import csv
+import io
+import base64
+import matplotlib
 
+matplotlib.use("agg")
+import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 
@@ -76,6 +91,33 @@ def train_model():
     faces = np.array(faces)
     knn = KNeighborsClassifier(n_neighbors=5)
     knn.fit(faces, labels)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        faces, labels, test_size=0.2, random_state=42
+    )
+
+    knn = KNeighborsClassifier(n_neighbors=5)
+
+    knn.fit(X_train, y_train)
+    y_pred = knn.predict(X_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average="weighted")
+    recall = recall_score(y_test, y_pred, average="weighted")
+    f1 = f1_score(y_test, y_pred, average="weighted")
+    matthews_cc = matthews_corrcoef(y_test, y_pred)
+
+    metrics = {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1_score": f1,
+        "matthews_cc": matthews_cc,
+    }
+
+    with open("static/metrics.pkl", "wb") as f:
+        joblib.dump(metrics, f)
+
     joblib.dump(knn, "static/face_recognition_model.pkl")
 
 
@@ -90,7 +132,6 @@ def extract_attendance():
     arrivees = [row[2] for row in rows]
     departs = [row[3] for row in rows]
     l = len(rows)
-    # print(f"Loaded {l} attendance records.")
     return names, rolls, arrivees, departs, l
 
 
@@ -116,7 +157,6 @@ def add_attendance(name):
     username = name.split("_")[0]
     userid = name.split("_")[1]
     current_time = datetime.now().strftime("%H:%M:%S")
-    # print(f"Recording attendance for {username} with id {userid} at {current_time}.")
 
     c.execute(
         "SELECT arrivee, depart FROM attendance WHERE date=? AND emp_id=?",
@@ -224,6 +264,39 @@ def start():
     )
 
 
+@app.route("/metrics")
+def metrics():
+    if os.path.exists("static/metrics.pkl"):
+        with open("static/metrics.pkl", "rb") as f:
+            metrics = joblib.load(f)
+    else:
+        metrics = {
+            "accuracy": "N/A",
+            "precision": "N/A",
+            "recall": "N/A",
+            "f1_score": "N/A",
+        }
+    keys = list(metrics.keys())
+    values = list(metrics.values())
+
+    if all(isinstance(val, (int, float)) for val in values):
+        plt.figure(figsize=(10, 5))
+        plt.bar(keys, values, color=["blue", "orange", "green", "red"])
+        plt.xlabel("Metrics")
+        plt.ylabel("Scores")
+        plt.title("Model Performance Metrics")
+
+        img = io.BytesIO()
+        plt.savefig(img, format="png")
+        img.seek(0)
+        plot_url = base64.b64encode(img.getvalue()).decode("utf8")
+
+        return render_template("metrics.html", metrics=metrics, plot_url=plot_url)
+    else:
+        print("Non-Numeric Values Detected in Metrics :", values)
+        return "Metrics not available", 500
+
+
 @app.route("/add", methods=["GET", "POST"])
 def add():
     newusername = request.form["newusername"]
@@ -260,7 +333,6 @@ def add():
             break
     cap.release()
     cv2.destroyAllWindows()
-    # print("Training Model")
     train_model()
     names, rolls, arrivees, departs, l = extract_attendance()
     return render_template(
