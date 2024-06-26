@@ -12,7 +12,6 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
-    confusion_matrix,
     matthews_corrcoef,
 )
 from sklearn.model_selection import train_test_split
